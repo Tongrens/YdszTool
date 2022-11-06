@@ -11,7 +11,7 @@ from datetime import datetime
 from Crypto.Cipher import AES
 from requests import get, post
 from urllib3 import disable_warnings
-from tkinter import Tk, StringVar, Label, Entry, Button, ttk, END, Checkbutton
+from tkinter import Tk, StringVar, Label, Entry, Button, ttk, END, Checkbutton, Frame
 
 
 class Ydsz:
@@ -111,13 +111,14 @@ class Ydsz:
                             print('错误信息：', e)
                 else:
                     start_time = datetime.now()
-                    end_time = self.day + ' ' + box6.get() + ':' + box7.get() + ':' + '00'
+                    end_time = text4.get() + ' ' + box6.get() + ':' + box7.get() + ':' + '00'
                     end_time = datetime.strptime(end_time, '%Y-%m-%d %H:%M:%S')
                     seconds = (end_time - start_time).total_seconds()
                     win.destroy()
                     if seconds > 120:
-                        print('开始倒计时，将在' + str(end_time.strftime('%Y-%m-%d %H:%M:%S')) + '两分钟前开始运行')
-                        while seconds > 120:
+                        print('开始倒计时，将在' + str(end_time.strftime('%Y-%m-%d %H:%M:%S')) + '两分钟前开始预约')
+                        seconds -= 120
+                        while seconds > 0:
                             print('距离开始运行还有' + str(int(seconds // 3600)) + '小时' + str(int(
                                 (seconds - 3600 * (seconds // 3600)) // 60)) + '分钟')
                             sleep(60)
@@ -193,24 +194,33 @@ class Ydsz:
         box5.set('1')
         box5.place(x=80, y=160)
 
+        frame1 = Frame(win, width=130, height=85, highlightbackground="black", highlightthickness=1)
+
         self.r1_type = StringVar()
         self.r1_type.set('F')
-        r1 = Checkbutton(win, text="定时提交预约", variable=self.r1_type, onvalue="T", offvalue="F")
-        r1.place(x=170, y=67)
+        r1 = Checkbutton(frame1, text="定时提交预约", variable=self.r1_type, onvalue="T", offvalue="F")
+        r1.place(x=15, y=0)
 
-        box6 = ttk.Combobox(master=win, state="readonly", values=[str(i) for i in range(0, 23)], width=2)
+        text4 = Entry(frame1, width=16)
+        text4.insert(END, "日期:2021-12-06")
+        text4.place(x=5, y=28)
+        text4.bind("<Button-1>", lambda a: text4.delete(0, END))
+
+        box6 = ttk.Combobox(master=frame1, state="readonly", values=[str(i) for i in range(0, 23)], width=2)
         box6.set('0')
-        box6.place(x=170, y=100)
-        txt8 = Label(win, text="时")
-        txt8.place(x=210, y=100)
-        box7 = ttk.Combobox(master=win, state="readonly", values=[str(i) for i in range(0, 60)], width=2)
+        box6.place(x=5, y=55)
+        txt8 = Label(frame1, text="时")
+        txt8.place(x=45, y=55)
+        box7 = ttk.Combobox(master=frame1, state="readonly", values=[str(i) for i in range(0, 60)], width=2)
         box7.set('0')
-        box7.place(x=230, y=100)
-        txt9 = Label(win, text="分")
-        txt9.place(x=270, y=100)
+        box7.place(x=65, y=55)
+        txt9 = Label(frame1, text="分")
+        txt9.place(x=105, y=55)
 
-        btn = Button(win, text="预约", command=main_run, width=14, height=2)
-        btn.place(x=170, y=132)
+        frame1.place(x=160, y=68)
+
+        btn = Button(win, text="预约", command=main_run, width=14)
+        btn.place(x=170, y=158)
 
         win.mainloop()
 

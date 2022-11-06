@@ -31,13 +31,13 @@ class Ydsz:
         self.win_box()
 
     def win_box(self):
-        def func():
-            if value1.get() == '西丽湖':
-                box2.config(values=xm1)
-                box2.set(xm1[0])
-            elif value1.get() == '留仙洞':
-                box2.config(values=xm2)
-                box2.set(xm2[0])
+        def func(event=None):
+            if box1.get() == '西丽湖':
+                box2['values'] = xm1
+                box2.current(0)
+            else:
+                box2['values'] = xm2
+                box2.current(0)
 
         def sec_run():
             flag = True

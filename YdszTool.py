@@ -101,6 +101,7 @@ class Ydsz:
                 if self.r1_type.get() == 'F':
                     try:
                         self.login()
+                        win.update()
                         win.destroy()
                         self.main()
                     except Exception as e:
@@ -110,25 +111,31 @@ class Ydsz:
                             print('登录失败')
                             print('错误信息：', e)
                 else:
-                    start_time = datetime.now()
-                    end_time = text4.get() + ' ' + box6.get() + ':' + box7.get() + ':' + '00'
-                    end_time = datetime.strptime(end_time, '%Y-%m-%d %H:%M:%S')
-                    seconds = (end_time - start_time).total_seconds()
-                    win.destroy()
-                    if seconds > 120:
-                        print('开始倒计时，将在' + str(end_time.strftime('%Y-%m-%d %H:%M:%S')) + '两分钟前开始预约')
-                        seconds -= 120
-                        while seconds > 0:
-                            print('距离开始运行还有' + str(int(seconds // 3600)) + '小时' + str(int(
-                                (seconds - 3600 * (seconds // 3600)) // 60)) + '分钟')
-                            sleep(60)
-                            seconds -= 60
-                        sec_run()
-                    elif seconds > 0:
-                        sec_run()
+                    text4_time = text4.get()
+                    if len(text4_time) == 10 and text4_time[4] == '-' and text4_time[7] == '-':
+                        start_time = datetime.now()
+                        end_time = text4.get() + ' ' + box6.get() + ':' + box7.get() + ':' + '00'
+                        end_time = datetime.strptime(end_time, '%Y-%m-%d %H:%M:%S')
+                        seconds = (end_time - start_time).total_seconds()
+                        win.update()
+                        win.destroy()
+                        if seconds > 120:
+                            print('开始倒计时，将在' + str(end_time.strftime('%Y-%m-%d %H:%M:%S')) + '两分钟前开始预约')
+                            seconds -= 120
+                            while seconds > 0:
+                                print('距离开始预约还有' + str(int(seconds // 3600)) + '小时' + str(int(
+                                    (seconds - 3600 * (seconds // 3600)) // 60)) + '分钟')
+                                sleep(60)
+                                seconds -= 60
+                            sec_run()
+                        else:
+                            print('预约开始时间小于两分钟或当前时间，将直接开始预约')
+                            sec_run()
                     else:
-                        print('预约开始时间小于当前时间')
-                        return
+                        print('开始时间格式错误，将直接开始预约')
+                        win.update()
+                        win.destroy()
+                        sec_run()
             except Exception as e:
                 print('登录失败')
                 print('错误信息：', e)
@@ -250,6 +257,7 @@ class Ydsz:
             raw = tmp.encode()
             cipher = AES.new(key, AES.MODE_CBC, iv)
             return b64encode(cipher.encrypt(raw))
+
         # 登录请求
         login_url = 'https://authserver.szpt.edu.cn/authserver/login?service=' \
                     'https%3A%2F%2Fydsz.szpt.edu.cn%3A443%2Fcas%2Flogin'
@@ -291,7 +299,18 @@ class Ydsz:
                 timelst.append(i + ':00')
         else:
             print('请检查时间参数')
-            return
+            return 2
+        # 获取卡ID和卡余额
+        url_get = 'https://ydsz.szpt.edu.cn/easyserpClient/card/getCardByUser?shopNum=' + \
+                  self.shopNum + '&token=' + self.token
+        try:
+            carddate = loads(get(url_get, headers={'Accept': 'application/json, text/plain, */*'}, verify=False)
+                             .text)['data'][0]
+            cardid = carddate['cardindex']
+            cardcash = carddate['cardcash']
+        except Exception as e:
+            print('获取校园卡数据失败，错误信息为：' + str(e))
+            return 2
         # 构造数据
         data_post = []
         money = 0
@@ -303,10 +322,12 @@ class Ydsz:
                              verify=False).text)['data']['placeArray']
         except Exception as e:
             print('获取场地信息失败，错误信息为：' + str(e))
-            return
+            return 2
         for i in data:
             for j in i['projectInfo']:
                 if j['state'] == 1 and j['starttime'] in timelst and num < self.max_site:
+                    if j['money'] + money > cardcash:
+                        break
                     timelst.remove(j['starttime'])
                     data_post.append({"day": self.day, "startTime": j["starttime"], "endTime": j["endtime"],
                                       "placeShortName": i["projectName"]["shortname"],
@@ -315,15 +336,6 @@ class Ydsz:
                     num += 1
         if not data_post:
             print('没有可用场地')
-            return
-        # 获取卡ID
-        url_get = 'https://ydsz.szpt.edu.cn/easyserpClient/card/getCardByUser?shopNum=' + \
-                  self.shopNum + '&token=' + self.token
-        try:
-            cardid = loads(get(url_get, headers={'Accept': 'application/json, text/plain, */*'}, verify=False)
-                           .text)['data'][0]['cardindex']
-        except Exception as e:
-            print('获取卡ID失败，错误信息为：' + str(e))
             return
         # 提交数据
         url_post = 'https://ydsz.szpt.edu.cn/easyserpClient/place/reservationPlace'
@@ -335,20 +347,23 @@ class Ydsz:
             result = loads(post(url_post, headers={'Accept': 'application/json, text/plain, */*'}, verify=False,
                                 params=post_data).text)
             if result.get('msg') == 'success':
-                print('预定成功，共计' + str(num) + '个场地，' + str(money) + '元')
+                print(datetime.now().strftime('%H:%M:%S') + '预定成功，共计' + str(num) + '个场地，' + str(money) + '元')
                 print('场地信息：')
                 for i in data_post:
                     print(i['name'] + ' ' + i['startTime'] + '-' + i['endTime'])
-                input('程序结束，按回车键退出')
                 return 1
             elif result.get('msg') == 'fail':
                 print('预定失败，错误信息为：' + result.get('data'))
+                return 2
             else:
                 print('预定失败，错误信息为：' + str(result.get('status'), str(result.get('error'))))
+                return 2
         except Exception as e:
             print('预定失败')
             print('错误信息：' + str(e))
+            return 2
 
 
 if __name__ == '__main__':
     run = Ydsz()
+    input('程序结束，按回车键退出')

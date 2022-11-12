@@ -55,8 +55,9 @@ class Ydsz:
                         print('错误信息：', e)
                         flag = False
                         break
-            if flag:
-                for _ in range(2500):
+            while flag:
+                print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                for _ in range(100):
                     if self.main():
                         break
 

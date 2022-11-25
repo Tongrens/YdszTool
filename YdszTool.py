@@ -9,8 +9,8 @@ from random import random
 from http import cookiejar
 from base64 import b64encode
 from datetime import datetime
-from Crypto.Cipher import AES
 from requests import get, post
+from Cryptodome.Cipher import AES
 from urllib3 import disable_warnings
 from tkinter import Tk, StringVar, Label, Entry, Button, ttk, END, Checkbutton, Frame
 

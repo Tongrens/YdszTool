@@ -1,3 +1,4 @@
+import ssl
 import urllib.parse
 import urllib.request
 from math import floor
@@ -18,6 +19,7 @@ class Ydsz:
     def __init__(self):
         # Disable SSL warnings
         disable_warnings()
+        ssl._create_default_https_context = ssl._create_unverified_context
 
         # 参数
         self.username, self.password, self.shopName, self.token, self.r1_type = '', '', '', '', ''
@@ -59,6 +61,7 @@ class Ydsz:
                 print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
                 for _ in range(100):
                     if self.main():
+                        flag = False
                         break
 
         def main_run():

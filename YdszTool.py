@@ -12,7 +12,7 @@ from datetime import datetime
 from requests import get, post
 from Cryptodome.Cipher import AES
 from urllib3 import disable_warnings
-from tkinter import Tk, StringVar, Label, Entry, Button, ttk, END, Checkbutton, Frame
+from tkinter import Tk, StringVar, Label, Entry, Button, ttk, END
 
 
 class Ydsz:
@@ -22,35 +22,37 @@ class Ydsz:
         ssl._create_default_https_context = ssl._create_unverified_context
 
         # 参数
-        self.username, self.password, self.shopName, self.token, self.r1_type = '', '', '', '', ''
-        self.day = '2022-11-06'  # 日期
+        self.username, self.password, self.shopName, self.token = '', '', '', ''
+        self.day = '2022-11-29'  # 日期
         self.starttime = 9  # 开始时间
         self.endtime = 12  # 结束时间
         self.max_site = 3  # 最多预约几小时
         self.shopNum = '1001'  # 西丽湖：1001  留仙洞：1002
         self.post_type = '羽毛球'
 
-        self.win_box()
-
-    def win_box(self):
+    def run(self):
         def func(event=None):
-            if box1.get() == '西丽湖':
-                box2['values'] = xm1
-                box2.current(0)
+            if xq_inp.get() == '西丽湖':
+                xm_inp['values'] = xm1
+                xm_inp.current(0)
             else:
-                box2['values'] = xm2
-                box2.current(0)
+                xm_inp['values'] = xm2
+                xm_inp.current(0)
 
         def sec_run():
             flag = True
-            print('开始预约')
+            print('开始预约' + self.day[:4] + '年' + self.day[5:7] + '月' + self.day[8:] + '日' + str(self.starttime) +
+                  '-' + str(self.endtime) + '点' + self.post_type + str(self.max_site) + '小时场地')
             while True:
                 try:
                     self.login()
                     break
                 except Exception as e:
                     if '由于目标计算机积极拒绝，无法连接。' in str(e):
-                        print('网站已关闭，正在重试...')
+                        print('一网通已关闭，正在重试...')
+                        sleep(2)
+                    elif '502' in str(e):
+                        print('韵动深职寄了，正在重试...')
                         sleep(2)
                     else:
                         print('登录失败')
@@ -60,34 +62,34 @@ class Ydsz:
             while flag:
                 print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
                 for _ in range(100):
-                    if self.main():
+                    if self.send_info():
                         flag = False
                         break
 
         def main_run():
-            if len(text1.get()) == 8:
-                self.username = text1.get()
+            if len(xh_inp.get()) == 8:
+                self.username = xh_inp.get()
             else:
                 print('学号格式错误')
                 return
-            if len(text2.get()) > 7:
-                self.password = text2.get()
+            if len(mm_inp.get()) > 7:
+                self.password = mm_inp.get()
             else:
                 print('密码格式错误')
                 return
-            tmp_time = text3.get()
+            tmp_time = rq_inp.get()
             if len(tmp_time) == 10 and tmp_time[4] == '-' and tmp_time[7] == '-':
                 self.day = tmp_time
             else:
                 print('日期格式错误')
                 return
-            if int(box3.get()) > int(box4.get()):
+            if int(kssj_inp.get()) > int(jssj_inp.get()):
                 print('开始时间大于结束时间')
                 return
             else:
-                self.starttime = int(box3.get())
-                self.endtime = int(box4.get())
-            self.max_site = int(box5.get())
+                self.starttime = int(kssj_inp.get())
+                self.endtime = int(jssj_inp.get())
+            self.max_site = int(yysc_inp.get())
             if value1.get() == '西丽湖':
                 self.shopNum = '1001'
             elif value1.get() == '留仙洞':
@@ -102,52 +104,16 @@ class Ydsz:
                 self.shopName = 'lxd' + tmp_dict[self.post_type]
                 self.post_type = '留仙洞' + self.post_type
             try:
-                if self.r1_type.get() == 'F':
-                    try:
-                        self.login()
-                        win.update()
-                        win.destroy()
-                        self.main()
-                    except Exception as e:
-                        if '由于目标计算机积极拒绝，无法连接。' in str(e):
-                            print('网站已关闭，请稍后再试')
-                        else:
-                            print('登录失败')
-                            print('错误信息：', e)
-                else:
-                    text4_time = text4.get()
-                    if len(text4_time) == 10 and text4_time[4] == '-' and text4_time[7] == '-':
-                        start_time = datetime.now()
-                        end_time = text4.get() + ' ' + box6.get() + ':' + box7.get() + ':' + '00'
-                        end_time = datetime.strptime(end_time, '%Y-%m-%d %H:%M:%S')
-                        seconds = (end_time - start_time).total_seconds()
-                        win.update()
-                        win.destroy()
-                        if seconds > 120:
-                            print('开始倒计时，将在' + str(end_time.strftime('%Y-%m-%d %H:%M:%S')) + '两分钟前开始预约')
-                            seconds -= 120
-                            while seconds > 0:
-                                print('距离开始预约还有' + str(int(seconds // 3600)) + '小时' + str(int(
-                                    (seconds - 3600 * (seconds // 3600)) // 60)) + '分钟')
-                                sleep(60)
-                                seconds -= 60
-                            sec_run()
-                        else:
-                            print('预约开始时间小于两分钟或当前时间，将直接开始预约')
-                            sec_run()
-                    else:
-                        print('开始时间格式错误，将直接开始预约')
-                        win.update()
-                        win.destroy()
-                        sec_run()
+                win.update()
+                win.destroy()
+                sec_run()
             except Exception as e:
-                print('登录失败')
+                print('订场失败')
                 print('错误信息：', e)
 
         win = Tk()
         win.title("韵动深职")
-        width = 300
-        height = 200
+        width, height = 420, 130
         win.geometry("{}x{}+{}+{}".format(width, height, int((win.winfo_screenwidth() - width) / 2),
                                           int((win.winfo_screenheight() - height) / 2)))
         value1, value2, value3, value4, value5 = StringVar(), StringVar(), StringVar(), StringVar(), StringVar()
@@ -155,83 +121,58 @@ class Ydsz:
         xm1 = ['羽毛球', '游泳', '体能中心']
         xm2 = ['羽毛球', '健身中心', '游泳', '风雨篮球', '灯光篮球', '网球']
 
-        txt1 = Label(win, text="学号：")
-        txt1.place(x=10, y=10)
-        txt2 = Label(win, text="密码：")
-        txt2.place(x=10, y=40)
+        xh_text = Label(win, text="学号：")
+        xh_text.place(x=10, y=10)
+        mm_text = Label(win, text="密码：")
+        mm_text.place(x=10, y=50)
+        rq_text = Label(win, text="日期：")
+        rq_text.place(x=10, y=90)
 
-        text1 = Entry(win, width=14)
-        text1.place(x=50, y=10)
-        text2 = Entry(win, width=14, show="*")
-        text2.place(x=50, y=40)
+        xh_inp = Entry(win, width=11)
+        xh_inp.place(x=50, y=10)
+        mm_inp = Entry(win, width=11, show="*")
+        mm_inp.place(x=50, y=50)
+        rq_inp = Entry(win, width=11)
+        rq_inp.place(x=50, y=90)
 
-        txt3 = Label(win, text="校区：")
-        txt3.place(x=160, y=10)
-        txt4 = Label(win, text="项目：")
-        txt4.place(x=160, y=40)
+        kssj_text = Label(win, text="开始时间：")
+        kssj_text.place(x=140, y=10)
+        jssj_text = Label(win, text="结束时间：")
+        jssj_text.place(x=140, y=50)
+        yysc_text = Label(win, text="预约时长：")
+        yysc_text.place(x=140, y=90)
 
-        box1 = ttk.Combobox(master=win, state="readonly", textvariable=value1, values=xq, width=8)
-        box1.set(xq[0])
-        box1.place(x=200, y=10)
-        box2 = ttk.Combobox(master=win, state="readonly", textvariable=value2, values=xm1, width=8)
-        box2.set(xm1[0])
-        box2.place(x=200, y=40)
-        box1.bind("<<ComboboxSelected>>", func)
+        kssj_inp = ttk.Combobox(master=win, state="readonly", values=[str(i) for i in range(9, 20)], width=7,
+                                textvariable=value3)
+        kssj_inp.set('9')
+        kssj_inp.place(x=205, y=10)
+        jssj_inp = ttk.Combobox(master=win, state="readonly", values=[str(i) for i in range(10, 21)], width=7,
+                                textvariable=value4)
+        jssj_inp.set('10')
+        jssj_inp.place(x=205, y=50)
+        yysc_inp = ttk.Combobox(master=win, state="readonly", values=[str(i) for i in range(1, 4)], width=7,
+                                textvariable=value5)
+        yysc_inp.set('1')
+        yysc_inp.place(x=205, y=90)
 
-        txt5 = Label(win, text="日期：")
-        txt5.place(x=10, y=70)
-        txt6 = Label(win, text="开始时间：")
-        txt6.place(x=10, y=100)
-        txt7 = Label(win, text="结束时间：")
-        txt7.place(x=10, y=130)
-        txt8 = Label(win, text="预约时长：")
-        txt8.place(x=10, y=160)
+        xq_test = Label(win, text="校区：")
+        xq_test.place(x=285, y=10)
+        xm_test = Label(win, text="项目：")
+        xm_test.place(x=285, y=50)
 
-        text3 = Entry(win, width=14)
-        text3.insert(END, "格式:2019-08-18")
-        text3.place(x=50, y=70)
-        text3.bind("<Button-1>", lambda a: text3.delete(0, END))
+        xq_inp = ttk.Combobox(master=win, state="readonly", textvariable=value1, values=xq, width=8)
+        xq_inp.set(xq[0])
+        xq_inp.place(x=325, y=10)
+        xm_inp = ttk.Combobox(master=win, state="readonly", textvariable=value2, values=xm1, width=8)
+        xm_inp.set(xm1[0])
+        xm_inp.place(x=325, y=50)
+        xq_inp.bind("<<ComboboxSelected>>", func)
 
-        box3 = ttk.Combobox(master=win, state="readonly", values=[str(i) for i in range(9, 20)], width=7,
-                            textvariable=value3)
-        box3.set('9')
-        box3.place(x=80, y=100)
-        box4 = ttk.Combobox(master=win, state="readonly", values=[str(i) for i in range(10, 21)], width=7,
-                            textvariable=value4)
-        box4.set('10')
-        box4.place(x=80, y=130)
-        box5 = ttk.Combobox(master=win, state="readonly", values=[str(i) for i in range(1, 4)], width=7,
-                            textvariable=value5)
-        box5.set('1')
-        box5.place(x=80, y=160)
+        yy_btn = Button(win, text="预约", command=main_run, width=14)
+        yy_btn.place(x=292, y=85)
 
-        frame1 = Frame(win, width=130, height=85, highlightbackground="black", highlightthickness=1)
-
-        self.r1_type = StringVar()
-        self.r1_type.set('F')
-        r1 = Checkbutton(frame1, text="定时提交预约", variable=self.r1_type, onvalue="T", offvalue="F")
-        r1.place(x=15, y=0)
-
-        text4 = Entry(frame1, width=16)
-        text4.insert(END, "日期:2021-12-06")
-        text4.place(x=5, y=28)
-        text4.bind("<Button-1>", lambda a: text4.delete(0, END))
-
-        box6 = ttk.Combobox(master=frame1, state="readonly", values=[str(i) for i in range(0, 23)], width=2)
-        box6.set('0')
-        box6.place(x=5, y=55)
-        txt8 = Label(frame1, text="时")
-        txt8.place(x=45, y=55)
-        box7 = ttk.Combobox(master=frame1, state="readonly", values=[str(i) for i in range(0, 60)], width=2)
-        box7.set('0')
-        box7.place(x=65, y=55)
-        txt9 = Label(frame1, text="分")
-        txt9.place(x=105, y=55)
-
-        frame1.place(x=160, y=68)
-
-        btn = Button(win, text="预约", command=main_run, width=14)
-        btn.place(x=170, y=158)
+        print('请输入信息以预约')
+        print('!!!请注意日期格式为\"2022-11-29\"!!!')
 
         win.mainloop()
 
@@ -291,7 +232,7 @@ class Ydsz:
         self.token = loads(opener.open(result).read().decode('utf-8'))['data']['infa']['openid']
         print('登录成功')
 
-    def main(self):
+    def send_info(self):
         # 生成时间列表
         timelst = []
         if self.starttime < self.endtime:
@@ -369,5 +310,6 @@ class Ydsz:
 
 
 if __name__ == '__main__':
-    run = Ydsz()
+    main = Ydsz()
+    main.run()
     input('程序结束，按回车键退出')

@@ -31,7 +31,7 @@ class Ydsz:
         self.post_type = '羽毛球'
 
     def run(self):
-        def func(event=None):
+        def func(_):
             if xq_inp.get() == '西丽湖':
                 xm_inp['values'] = xm1
                 xm_inp.current(0)

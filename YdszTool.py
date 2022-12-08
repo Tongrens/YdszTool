@@ -12,7 +12,7 @@ from datetime import datetime
 from requests import get, post
 from Cryptodome.Cipher import AES
 from urllib3 import disable_warnings
-from tkinter import Tk, StringVar, Label, Entry, Button, ttk, END
+from tkinter import Tk, StringVar, Label, Entry, Button, ttk
 
 
 class Ydsz:

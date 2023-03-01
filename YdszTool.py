@@ -1,3 +1,4 @@
+import ssl
 import urllib.parse
 import urllib.request
 from json import loads
@@ -17,12 +18,14 @@ class Ydsz:
     def __init__(self, iusername, ipassword, iday, istarttime, iendtime, imax_site, ishopnum, ipost_type):
         # Disable SSL warnings
         disable_warnings()
+        ssl._create_default_https_context = ssl._create_unverified_context
 
         # 参数
         self.token, self.shopName = '', ''
         self.username, self.password = iusername, ipassword
         self.day, self.starttime, self.endtime, self.max_site = iday, istarttime, iendtime, imax_site
         self.shopNum, self.post_type = ishopnum, ipost_type
+        self.headers = {'Accept': 'application/json, text/plain, */*'}
         self.post_dict = {'羽毛球': 'ymq', '健身中心': 'jszx', '游泳': 'yy', '风雨篮球': 'fylq', '灯光篮球': 'dglq',
                           '网球': 'wq', '体能中心': 'tnzx'}
 
@@ -30,6 +33,7 @@ class Ydsz:
         class NoRedirHandler(urllib.request.HTTPRedirectHandler):
             def http_error_302(self, req, fp, code, msg, headers):
                 return fp
+
             http_error_301 = http_error_302
 
         print('正在登录...')
@@ -50,8 +54,7 @@ class Ydsz:
         if amount_to_pad == 0:
             amount_to_pad = AES.block_size
         raw = (raw + chr(amount_to_pad) * amount_to_pad).encode()
-        cipher = AES.new(aes_key, AES.MODE_CBC, iv)
-        password_aes = b64encode(cipher.encrypt(raw))
+        password_aes = b64encode(AES.new(aes_key, AES.MODE_CBC, iv).encrypt(raw))
         params = {'username': self.username, 'password': password_aes, 'lt': lt,
                   'dllt': 'userNamePasswordLogin',
                   'execution': execution, '_eventId': 'submit', 'rmShown': '1'}
@@ -59,15 +62,13 @@ class Ydsz:
         result = urllib.request.Request(url=login_url, method='POST',
                                         data=urllib.parse.urlencode(params).encode(encoding='UTF-8'))
         login_url = search('href="(.*?)"', opener.open(result).read().decode('utf-8'), S).group(1)
-        result = urllib.request.Request(url=login_url, method='GET')
-        login_url = opener.open(result).headers['Location']
-        result = urllib.request.Request(url=login_url, method='GET')
-        login_url = opener.open(result).headers['Location']
+        login_url = opener.open(urllib.request.Request(url=login_url, method='GET')).headers['Location']
+        login_url = opener.open(urllib.request.Request(url=login_url, method='GET')).headers['Location']
         # 获取openid
-        end_url = 'https://ydsz.szpt.edu.cn/easyserpClient/memberLogin/logined3?' + login_url[62:] + '&clubMemberCode' \
-                                                                                                     '=szzyjsxy0'
+        end_url = 'https://ydsz.szpt.edu.cn/easyserpClient/memberLogin/logined3?' + \
+                  login_url[62:] + '&clubMemberCode=szzyjsxy0'
         result = urllib.request.Request(url=end_url, method='GET')
-        self.token = loads(opener.open(result).read().decode('utf-8'))['data']['infa']['openid']
+        self.token = loads(opener.open(result, timeout=5).read().decode('utf-8'))['data']['infa']['openid']
         print('登录成功')
 
     def send_info(self):
@@ -75,11 +76,7 @@ class Ydsz:
         timelst = []
         if self.starttime < self.endtime:
             for i in range(self.starttime, self.endtime):
-                if len(str(i)) < 2:
-                    i = '0' + str(i)
-                else:
-                    i = str(i)
-                timelst.append(i + ':00')
+                timelst.append(str(i) + ':00' if len(str(i)) > 1 else '0' + str(i) + ':00')
         else:
             print('请检查时间参数')
             return 2
@@ -87,22 +84,17 @@ class Ydsz:
         url_get = 'https://ydsz.szpt.edu.cn/easyserpClient/card/getCardByUser?shopNum=' + \
                   self.shopNum + '&token=' + self.token
         try:
-            carddate = loads(get(url_get, headers={'Accept': 'application/json, text/plain, */*'}, verify=False)
-                             .text)['data'][0]
-            cardid = carddate['cardindex']
-            cardcash = carddate['cardcash']
+            carddate = loads(get(url_get, headers=self.headers, verify=False).text)['data'][0]
+            cardid, cardcash = carddate['cardindex'], carddate['cardcash']
         except Exception as e:
             print('获取校园卡数据失败，错误信息为：' + str(e))
             return 2
         # 构造数据
-        data_post = []
-        money = 0
-        num = 0
+        data_post, money, num = [], 0, 0
         url_get = 'https://ydsz.szpt.edu.cn/easyserpClient/datediscount/getPlaceInfoByShortNameDiscount?shopNum=' + \
                   self.shopNum + '&dateymd=' + self.day + '&shortName=' + self.shopName + '&token=' + self.token
         try:
-            data = loads(get(url_get, headers={'Accept': 'application/json, text/plain, */*'},
-                             verify=False).text)['data']['placeArray']
+            data = loads(get(url_get, headers=self.headers, verify=False).text)['data']['placeArray']
         except Exception as e:
             print('获取场地信息失败，错误信息为：' + str(e))
             return 2
@@ -122,13 +114,13 @@ class Ydsz:
             return
         # 提交数据
         url_post = 'https://ydsz.szpt.edu.cn/easyserpClient/place/reservationPlace'
-        post_data = 'token=' + self.token + '&shopNum=' + self.shopNum + '&fieldinfo=' + urllib.parse.quote(str(
-            data_post)) + '&oldTotal=' + str(int(money)) + '.00&cardPayType=0&type=' + urllib.parse.quote(
-            self.post_type) + '&offerId=&offerType=&total=' + str(int(money)) + '.00&premerother=&cardIndex=' + \
-            cardid + '&masterCardNum=&zengzhiMoney=0'
+        post_data = 'token=' + self.token + '&shopNum=' + self.shopNum + \
+                    '&fieldinfo=' + urllib.parse.quote(str(data_post)) + \
+                    '&oldTotal=' + str(int(money)) + '.00&cardPayType=0&type=' + \
+                    urllib.parse.quote(self.post_type) + '&offerId=&offerType=&total=' + \
+                    str(int(money)) + '.00&premerother=&cardIndex=' + cardid + '&masterCardNum=&zengzhiMoney=0'
         try:
-            result = loads(post(url_post, headers={'Accept': 'application/json, text/plain, */*'}, verify=False,
-                                params=post_data).text)
+            result = loads(post(url_post, headers=self.headers, verify=False, params=post_data).text)
             if result.get('msg') == 'success':
                 print(datetime.now().strftime('%H:%M:%S') + '预定成功，共计' + str(num) + '个场地，' + str(money) + '元')
                 print('场地信息：')
@@ -155,10 +147,10 @@ class Ydsz:
                 self.login()
                 break
             except Exception as e:
-                if '由于目标计算机积极拒绝，无法连接。' in str(e):
+                if '由于目标计算机积极拒绝，无法连接。' in str(e) or 'Errno 111' in str(e):
                     print('一网通已关闭，正在重试...')
                     sleep(2)
-                elif '502' in str(e):
+                elif '502' in str(e) or 'Remote end' in str(e) or 'timed out' in str(e):
                     print('韵动深职寄了，正在重试...')
                     sleep(2)
                 else:
@@ -203,17 +195,13 @@ class Ydsz:
                 print('开始时间大于结束时间')
                 return
             else:
-                self.starttime = int(kssj_inp.get())
-                self.endtime = int(jssj_inp.get())
+                self.starttime, self.endtime = int(kssj_inp.get()), int(jssj_inp.get())
             if datetime.strptime(self.day + ' ' + str(self.starttime) + ':00:00', '%Y-%m-%d %H:%M:%S') < \
                     datetime.strptime(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), '%Y-%m-%d %H:%M:%S'):
                 print('开始时间小于当前时间')
                 return
             self.max_site = int(yysc_inp.get())
-            if value1.get() == '西丽湖':
-                self.shopNum = '1001'
-            elif value1.get() == '留仙洞':
-                self.shopNum = '1002'
+            self.shopNum = '1001' if value1.get() == '西丽湖' else self.shopNum = '1002'
             self.post_type = value2.get()
             if self.shopNum == '1001':
                 self.shopName = 'xlh' + self.post_dict[self.post_type]
@@ -291,7 +279,6 @@ class Ydsz:
 
         print('请输入信息以预约')
         print('!!!请注意日期格式为\"2022-11-29\"!!!')
-
         win.mainloop()
 
     def linux_run(self):
@@ -322,15 +309,15 @@ class Ydsz:
 
 
 if __name__ == '__main__':
-    username = ''   # 一网通账号
-    password = ''   # 一网通密码
-    day = '2023-02-28'  # 预约日期
-    starttime = 9  # 开始时间
-    endtime = 12  # 结束时间
+    username = ''  # 一网通账号
+    password = ''  # 一网通密码
+    day = '2023-03-02'  # 预约日期
+    starttime = 14  # 开始时间
+    endtime = 20  # 结束时间
     max_site = 3  # 最多预约几小时(最多3小时)
     shopNum = '1001'  # 西丽湖：1001  留仙洞：1002
     post_type = '羽毛球'  # 羽毛球, 健身中心, 游泳, 风雨篮球, 灯光篮球, 网球, 体能中心
-    run_type = 1  # 1：Windows端  2：Linux端
+    run_type = 2  # 1：Windows端  2：Linux端
     main = Ydsz(username, password, day, starttime, endtime, max_site, shopNum, post_type)
     main.win_box() if run_type == 1 else main.linux_run()
     input('程序结束，按回车键退出')

@@ -33,7 +33,6 @@ class Ydsz:
         class NoRedirHandler(urllib.request.HTTPRedirectHandler):
             def http_error_302(self, req, fp, code, msg, headers):
                 return fp
-
             http_error_301 = http_error_302
 
         print('正在登录...')
@@ -122,14 +121,18 @@ class Ydsz:
         try:
             result = loads(post(url_post, headers=self.headers, verify=False, params=post_data).text)
             if result.get('msg') == 'success':
-                print(datetime.now().strftime('%H:%M:%S') + '预定成功，共计' + str(num) + '个场地，' + str(money) + '元')
+                print('预定成功，共计' + str(num) + '个场地，' + str(money) + '元')
                 print('场地信息：')
                 for i in data_post:
                     print(i['name'] + ' ' + i['startTime'] + '-' + i['endTime'])
                 return 1
             elif result.get('msg') == 'fail':
-                print('预定失败，错误信息为：' + result.get('data'))
-                return 2
+                if '下手太晚了' in result.get('data'):
+                    print('场地预约尚未开放')
+                    return
+                else:
+                    print('预定失败，错误信息为：' + result.get('data'))
+                    return 2
             else:
                 print('预定失败，错误信息为：' + str(result.get('status'), str(result.get('error'))))
                 return 2
@@ -147,6 +150,7 @@ class Ydsz:
                 self.login()
                 break
             except Exception as e:
+                print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
                 if '由于目标计算机积极拒绝，无法连接。' in str(e) or 'Errno 111' in str(e):
                     print('一网通已关闭，正在重试...')
                     sleep(2)
@@ -201,7 +205,7 @@ class Ydsz:
                 print('开始时间小于当前时间')
                 return
             self.max_site = int(yysc_inp.get())
-            self.shopNum = '1001' if value1.get() == '西丽湖' else self.shopNum = '1002'
+            self.shopNum = '1001' if value1.get() == '西丽湖' else '1002'
             self.post_type = value2.get()
             if self.shopNum == '1001':
                 self.shopName = 'xlh' + self.post_dict[self.post_type]
@@ -278,6 +282,7 @@ class Ydsz:
         yy_btn.place(x=292, y=85)
 
         print('请输入信息以预约')
+        print('请确保校园卡余额充足~')
         print('!!!请注意日期格式为\"2022-11-29\"!!!')
         win.mainloop()
 
@@ -317,7 +322,7 @@ if __name__ == '__main__':
     max_site = 3  # 最多预约几小时(最多3小时)
     shopNum = '1001'  # 西丽湖：1001  留仙洞：1002
     post_type = '羽毛球'  # 羽毛球, 健身中心, 游泳, 风雨篮球, 灯光篮球, 网球, 体能中心
-    run_type = 2  # 1：Windows端  2：Linux端
+    run_type = 1  # 1：Windows端  2：Linux端
     main = Ydsz(username, password, day, starttime, endtime, max_site, shopNum, post_type)
     main.win_box() if run_type == 1 else main.linux_run()
     input('程序结束，按回车键退出')

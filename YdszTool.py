@@ -39,14 +39,20 @@ class Ydsz:
         print('正在登录...')
         # 登录请求
         login_url = 'https://authserver.szpt.edu.cn/authserver/login?service=' \
-                    'https%3A%2F%2Fydsz.szpt.edu.cn%3A443%2Fcas%2Flogin'
+                    'https%3A%2F%2Fydsz.szpu.edu.cn%3A443%2Fcas%2Flogin'
         request = urllib.request.Request(url=login_url, method='GET')
         opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookiejar.CookieJar()), NoRedirHandler)
         html = opener.open(request).read().decode('utf-8')
+        # 判断是否需要captcha
+        check_url = 'https://authserver.szpt.edu.cn/authserver/checkNeedCaptcha.htl?username=' + self.username
+        if loads(opener.open(check_url).read().decode('utf-8'))['isNeed']:
+            print('需要图片验证码，请前往登录页面登录后重试！\n'
+                  'https://authserver.szpt.edu.cn/authserver/login?service='
+                  'https%3A%2F%2Fydsz.szpu.edu.cn%3A443%2Fcas%2Flogin')
+            return
         # 获取登录参数
-        lt = search('name="lt" value="(.*?)"/>', html, S).group(1)
-        execution = search('name="execution" value="(.*?)"/>', html, S).group(1)
-        aes_key = search('pwdDefaultEncryptSalt = "(.*?)";', html, S).group(1)[:16].encode('utf-8')
+        execution = search('name="execution" value="(.*?)"', html, S).group(1)
+        aes_key = search('pwdEncryptSalt" value="(.*?)"/>', html, S).group(1)[:16].encode('utf-8')
         aes_chars = 'ABCDEFGHJKMNPQRSTWXYZabcdefhijkmnprstwxyz2345678'
         iv = ''.join([choice(aes_chars) for _ in range(16)]).encode()
         raw = ''.join([choice(aes_chars) for _ in range(64)]) + self.password
@@ -55,17 +61,17 @@ class Ydsz:
             amount_to_pad = AES.block_size
         raw = (raw + chr(amount_to_pad) * amount_to_pad).encode()
         password_aes = b64encode(AES.new(aes_key, AES.MODE_CBC, iv).encrypt(raw))
-        params = {'username': self.username, 'password': password_aes, 'lt': lt,
-                  'dllt': 'userNamePasswordLogin',
-                  'execution': execution, '_eventId': 'submit', 'rmShown': '1'}
+        params = {'username': self.username, 'password': str(password_aes)[2:-1], 'captcha': '',
+                  '_eventId': 'submit', 'cllt': 'userNameLogin', 'dllt': 'generalLogin', 'lt': '',
+                  'execution': execution}
         # 获取重定向
         result = urllib.request.Request(url=login_url, method='POST',
                                         data=urllib.parse.urlencode(params).encode(encoding='UTF-8'))
-        login_url = search('href="(.*?)"', opener.open(result).read().decode('utf-8'), S).group(1)
+        login_url = opener.open(result).headers['Location']
         login_url = opener.open(urllib.request.Request(url=login_url, method='GET')).headers['Location']
         login_url = opener.open(urllib.request.Request(url=login_url, method='GET')).headers['Location']
         # 获取openid
-        end_url = 'https://ydsz.szpt.edu.cn/easyserpClient/memberLogin/logined3?' + \
+        end_url = 'https://ydsz.szpu.edu.cn/easyserpClient/memberLogin/logined3?' + \
                   login_url[62:] + '&clubMemberCode=szzyjsxy0'
         result = urllib.request.Request(url=end_url, method='GET')
         self.token = loads(opener.open(result, timeout=5).read().decode('utf-8'))['data']['infa']['openid']
@@ -151,21 +157,14 @@ class Ydsz:
                 self.login()
                 break
             except Exception as e:
-<<<<<<< Updated upstream
                 print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-=======
->>>>>>> Stashed changes
-                if '由于目标计算机积极拒绝，无法连接。' in str(e) or 'Errno 111' in str(e):
-                    print('一网通已关闭，正在重试...')
-                    sleep(2)
-                elif '502' in str(e) or 'Remote end' in str(e) or 'timed out' in str(e):
-                    print('韵动深职寄了，正在重试...')
-                    sleep(2)
+                if '远程主机强迫关闭了一个现有的连接' in str(e):
+                    print('请连接校园网后重试！')
                 else:
                     print('登录失败')
                     print('错误信息：', e)
-                    flag = False
-                    break
+                flag = False
+                break
         while flag:
             print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
             for _ in range(100):
@@ -209,11 +208,7 @@ class Ydsz:
                 print('开始时间小于当前时间')
                 return
             self.max_site = int(yysc_inp.get())
-<<<<<<< Updated upstream
             self.shopNum = '1001' if value1.get() == '西丽湖' else '1002'
-=======
-            self.shopNum = '1001' if value1.get() == '西丽湖' else self.shopNum = '1002'
->>>>>>> Stashed changes
             self.post_type = value2.get()
             if self.shopNum == '1001':
                 self.shopName = 'xlh' + self.post_dict[self.post_type]
@@ -324,13 +319,13 @@ class Ydsz:
 if __name__ == '__main__':
     username = ''  # 一网通账号
     password = ''  # 一网通密码
-    day = '2023-03-02'  # 预约日期
+    day = '2023-12-04'  # 预约日期
     starttime = 14  # 开始时间
     endtime = 20  # 结束时间
     max_site = 3  # 最多预约几小时(最多3小时)
     shopNum = '1001'  # 西丽湖：1001  留仙洞：1002
     post_type = '羽毛球'  # 羽毛球, 健身中心, 游泳, 风雨篮球, 灯光篮球, 网球, 体能中心
-    run_type = 2  # 1：Windows端  2：Linux端
+    run_type = 1  # 1：Windows端  2：Linux端
     main = Ydsz(username, password, day, starttime, endtime, max_site, shopNum, post_type)
     main.win_box() if run_type == 1 else main.linux_run()
     input('程序结束，按回车键退出')

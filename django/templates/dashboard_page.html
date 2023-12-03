@@ -1,0 +1,260 @@
+{% block content %}
+    <!DOCTYPE html>
+    <html lang="zh">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>YdszTool</title>
+        <style>
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin: 0;
+            }
+
+            #login-container {
+                width: 320px;
+                height: 100%;
+                background-color: #f1f1f1;
+                border: 10px solid #4CAF50;
+                border-radius: 10px;
+            }
+
+            #header {
+                text-align: center;
+                padding: 5px;
+                background-color: #4CAF50;
+                color: white;
+            }
+
+            #form-container {
+                padding: 10px;
+            }
+
+            .form-item {
+                margin: 10px 0;
+            }
+
+            .form-item label {
+                display: inline-block;
+                width: 80px;
+            }
+
+            .form-item input, .form-item select {
+                width: 200px;
+                height: 30px;
+                border-radius: 5px;
+                border: 1px solid #ccc;
+                padding: 0 5px;
+            }
+
+            .form-item input[type="submit"] {
+                width: 100%;
+                height: 40px;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+            }
+
+            .form-item input[type="submit"]:hover {
+                background-color: #45a049;
+            }
+
+            .form-item input[type="date"] {
+                width: 200px;
+                height: 30px;
+                border-radius: 5px;
+                border: 1px solid #ccc;
+                padding: 0 5px;
+            }
+
+            .form-item select {
+                width: 212px;
+                height: 30px;
+                border-radius: 5px;
+                border: 1px solid #ccc;
+                padding: 0 5px;
+            }
+
+            .form-item select option {
+                width: 200px;
+                height: 30px;
+                border-radius: 5px;
+                border: 1px solid #ccc;
+                padding: 0 5px;
+            }
+
+            #footer {
+                text-align: center;
+                background-color: #4CAF50;
+                color: white;
+                height: 30px;
+                line-height: 40px;
+                font-size: 13px;
+            }
+
+
+        </style>
+    </head>
+    <body>
+    <div id="login-container">
+        <div id="header">
+            <p style="margin: 0; padding: 5px 0 10px">韵动深职提交脚本</p>
+        </div>
+        <form action="/submit/" method="post">
+            <div id="form-container">
+                <div class="form-item">
+                    <label for="username">学号</label>
+                    <input type="text" name="username" id="username" placeholder="请输入学号" required>
+                </div>
+                <div class="form-item">
+                    <label for="password">密码</label>
+                    <input type="password" name="password" id="password" placeholder="请输入密码" required>
+                </div>
+                <div class="form-item">
+                    <label for="campus">校区</label>
+                    <select name="campus" id="campus" required>
+                        <option value="1001">西丽湖</option>
+                        <option value="1002">留仙洞</option>
+                    </select>
+                </div>
+                <div class="form-item" id="pro_div">
+                    <label for="project">项目</label>
+                    <select name="project" id="project" required onchange="updateTimeRange()">
+                        <option value="羽毛球">羽毛球</option>
+                        <option value="体能中心">体能中心</option>
+                    </select>
+                </div>
+                <div class="form-item" id="pro_div1" hidden="hidden">
+                    <label for="project1">项目</label>
+                    <select name="project1" id="project1" required onchange="updateTimeRange()">
+                        <option value="羽毛球">羽毛球</option>
+                        <option value="健身中心">健身中心</option>
+                        <option value="游泳">游泳</option>
+                        <option value="网球">网球</option>
+                    </select>
+                </div>
+                <div class="form-item">
+                    <label for="date">日期</label>
+                    <input type="date" name="date" id="date" required>
+                    <div class="form-item">
+                        <label for="start_time">开始时间</label>
+                        <select name="start_time" id="start_time" required>
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label for="end_time">结束时间</label>
+                        <select name="end_time" id="end_time" required>
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label for="max_site">预约时长</label>
+                        <select name="max_site" id="max_site" required>
+                            <option value="1">1小时</option>
+                            <option value="2">2小时</option>
+                            <option value="3">3小时</option>
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label for="submit"></label>
+                        <input type="submit" value="提交" id="submit" onclick="return checkTime()">
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div id="footer">
+            Powered by <a href="https://github.com/Tongrens/YdszTool">Tongrens</a>
+        </div>
+    </div>
+    </body>
+    <script>
+        // 检测校区变化
+        const campus = document.getElementById('campus');
+        campus.addEventListener('change', function () {
+            const project = document.getElementById('pro_div');
+            const project1 = document.getElementById('pro_div1');
+            if (campus.value === '1001') {
+                project.hidden = false;
+                project1.hidden = true;
+            } else {
+                project.hidden = true;
+                project1.hidden = false;
+            }
+        });
+        // 修改默认时间
+        const date = document.getElementById('date');
+        const today = new Date();
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        date.value = tomorrowStr;
+
+        // 辅助函数，用于添加选项
+        function addOption(selectElement, value, text) {
+            const option = document.createElement('option');
+            option.value = value;
+            option.text = text;
+            selectElement.add(option);
+        }
+
+        // 动态生成时间选项
+        function updateTimeRange() {
+            const projectSelect = document.getElementById('project');
+            const project1Select = document.getElementById('project1');
+            const startTimeSelect = document.getElementById('start_time');
+            const endTimeSelect = document.getElementById('end_time');
+            startTimeSelect.innerHTML = '';
+            endTimeSelect.innerHTML = '';
+            const selectedProject = campus.value === '1001' ? projectSelect.value : project1Select.value;
+            let defaultStartTime = 9;
+            let defaultEndTime = 20;
+            if (selectedProject === '羽毛球') {
+                defaultStartTime = 9;
+                defaultEndTime = 20;
+            } else if (selectedProject === '体能中心') {
+                defaultStartTime = 16;
+                defaultEndTime = 20;
+            } else if (selectedProject === '健身中心') {
+                defaultStartTime = 9;
+                defaultEndTime = 20;
+            } else if (selectedProject === '游泳') {
+                defaultStartTime = 16;
+                defaultEndTime = 20;
+            } else if (selectedProject === '网球') {
+                defaultStartTime = 9;
+                defaultEndTime = 20;
+            }
+            for (let i = defaultStartTime; i < defaultEndTime; i++) {
+                addOption(startTimeSelect, i, i + ':00');
+            }
+            for (let j = defaultStartTime + 1; j <= defaultEndTime; j++) {
+                addOption(endTimeSelect, j, j + ':00');
+            }
+        }
+
+        // 判断开始时间
+        function checkTime() {
+            const startTime = document.getElementById('start_time').value;
+            const endTime = document.getElementById('end_time').value;
+            const date = document.getElementById('date').value;
+            const today = new Date();
+            const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+            const tomorrowStr = tomorrow.toISOString().split('T')[0];
+            if (date === tomorrowStr) {
+                if (parseInt(startTime) < today.getHours()) {
+                    alert('开始时间不能比当前时间早');
+                    return false;
+                }
+            }
+            if (parseInt(startTime) >= parseInt(endTime)) {
+                alert('开始时间不能晚于结束时间');
+                return false;
+            }
+            return true;
+        }
+
+        updateTimeRange();
+    </script>
+{% endblock %}

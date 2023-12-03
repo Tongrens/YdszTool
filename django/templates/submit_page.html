@@ -1,0 +1,14 @@
+{% block content %}
+    <body>
+        {% if not token %}
+            <script>
+                alert('{{ sta }}')
+                window.location.href = "/";
+            </script>
+        {% else %}
+            <script>
+                window.location.href = "/info?shopnum={{ shopnum }}&shopname={{ shopname }}&post_type={{ post_type }}&day={{ day }}&starttime={{ starttime }}&endtime={{ endtime }}&max_site={{ max_site }}&token={{ token }}";
+            </script>
+        {% endif %}
+    </body>
+{% endblock %}
